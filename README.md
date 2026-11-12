@@ -8,7 +8,7 @@ This project evaluates keyword and semantic search on the same ten-query test se
 node eval.js
 ```
 
-The script reads `test-set.csv` and `search-results.json` from the repository directory and prints a Markdown comparison table.
+The script reads `test-set.csv` and `search-results.json` from the repository directory and prints a Markdown comparison table. It also checks for malformed test-set rows and missing search results, so input issues produce a helpful error instead of misleading metrics.
 
 ## Results
 

@@ -7,16 +7,22 @@ const dataDir = __dirname;
 
 function loadTestSet(filePath) {
   const lines = fs.readFileSync(filePath, 'utf8').trim().split(/\r?\n/);
-  return lines.slice(1).filter(Boolean).map((line) => {
+  return lines.slice(1).filter(Boolean).map((line, index) => {
     const comma = line.indexOf(',');
-    if (comma < 0) throw new Error(`Invalid test-set row: ${line}`);
-    const query = line.slice(0, comma);
-    const correctIds = line.slice(comma + 1).split(';').map(Number);
+    if (comma < 0) throw new Error(`Invalid test-set row ${index + 2}: ${line}`);
+    const query = line.slice(0, comma).trim();
+    const idValues = line.slice(comma + 1).split(';').map((value) => value.trim());
+    const correctIds = idValues.map(Number);
+    if (!query || correctIds.length === 0 || correctIds.some((id) => !Number.isInteger(id))) {
+      throw new Error(`Invalid query or correct post IDs on test-set row ${index + 2}: ${line}`);
+    }
     return { query, correctIds };
   });
 }
 
 const testSet = loadTestSet(path.join(dataDir, 'test-set.csv'));
+if (testSet.length === 0) throw new Error('The test set contains no queries.');
+
 const results = JSON.parse(fs.readFileSync(path.join(dataDir, 'search-results.json'), 'utf8'));
 
 // Return the 1-based position of the first relevant result, or null on a miss.
@@ -45,8 +51,9 @@ for (const { query, correctIds } of testSet) {
   for (const system of ['keyword', 'semantic']) {
     const rankedIds = queryResults[system];
     if (!Array.isArray(rankedIds)) throw new Error(`Missing ${system} results for query: ${query}`);
-    ranks[system] = rankOf(rankedIds.slice(0, 10), correctIds);
-    const rr = reciprocalRank(rankedIds.slice(0, 10), correctIds);
+    const topTen = rankedIds.slice(0, 10);
+    ranks[system] = rankOf(topTen, correctIds);
+    const rr = reciprocalRank(topTen, correctIds);
     scores[system].reciprocalRanks.push(rr);
     if (rr > 0) scores[system].hits += 1;
   }
